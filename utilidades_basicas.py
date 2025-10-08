@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 
 
 def leer_video(video):
+    """
+    Lee un vídeo desde la ruta <video> y devuelve el objeto de captura (cv2.VideoCapture).
+    Muestra un mensaje de error y finaliza el programa si no se puede abrir.
+    """
     cap = cv2.VideoCapture(video)
 
     # Mensaje por si no podemos acceder al archivo
@@ -14,7 +18,8 @@ def leer_video(video):
     return cap
 
 
-def visualizar_video(video):
+def visualizar_video(video, ancho, alto):
+    """Muestra un vídeo <video> redimensionado (<ancho>, <alto>) hasta que termine o se pulse ESC"""
     cap = leer_video(video)
 
     # Visualizar el vídeo
@@ -28,7 +33,7 @@ def visualizar_video(video):
             break
 
         # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (1000, 700))
+        frame = cv2.resize(frame, (ancho, alto))
 
         cv2.imshow('Video original', frame)
         
@@ -42,7 +47,11 @@ def visualizar_video(video):
     cap.release()
 
 
-def obtener_fondo(video):
+def obtener_fondo(video, ancho, alto):
+    """
+    Calcula el fondo estático de un vídeo <video> promediando todos sus frames.
+    Devuelve la imagen del fondo redimensionada al tamaño indicado (<ancho>, <alto>).
+    """
     cap = leer_video(video)
 
     frames = [] # Donde añadiremos todos los frames del vídeo
@@ -57,12 +66,12 @@ def obtener_fondo(video):
             break
 
         # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (400, 300))
+        frame = cv2.resize(frame, (ancho, alto))
 
         # Convertimos a float para evitar saturación en la suma
         frames.append(frame.astype(np.float32))
 
-        # Para cerrar el vídeo
+        # Para terminar el proceso
         if cv2.waitKey(5) & 0xFF == 27: # Código ACII esc == 27:
             break
 
@@ -78,14 +87,20 @@ def obtener_fondo(video):
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     cv2.imwrite("images/fondo_sin_coches.jpg", promedio) # Escribe la imagen generada en la ruta descrita
-    return promedio
+    fondo = cv2.resize(promedio, (ancho, alto)) # Redimensiona la imagen del fondo según los parametros
+    return fondo
 
 
-def quitar_fondo(video, fondo):
+def quitar_fondo(video, fondo, ancho, alto):
+    """
+    Resta el fondo estático de un vídeo para resaltar los objetos en movimiento.
+    <video>: ruta del archivo de vídeo
+    <fondo>: ruta de la imagen de fondo
+    <ancho>, <alto>: dimensiones a las que se redimensionarán ambos
+    """
     cap = leer_video(video)
-    fondo = cv2.imread(fondo)  # Leer imagen desde disco
-    fondo = cv2.resize(fondo, (400, 300)) # Cambiamos el tamaño para coincida con el del video
-    fondo = fondo.astype(np.uint8)
+    # Leemos la imagen, la redimensionamos, y la cambiamos al formato uint8 para poder trabajar con ella
+    fondo = cv2.resize(cv2.imread(fondo), (ancho, alto)).astype(np.uint8)
 
     # Recorremos el video
     while(True):
@@ -96,8 +111,8 @@ def quitar_fondo(video, fondo):
             print("Fin del vídeo")
             break
 
-        # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (400, 300))
+        # Ajustamos para que el vídeo coincida con las dimensiones del fondo
+        frame = cv2.resize(frame, (ancho, alto))
 
         # Restamos
         diferencia = cv2.absdiff(frame, fondo)
