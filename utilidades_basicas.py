@@ -47,7 +47,11 @@ def visualizar_video(video, ancho, alto):
     cap.release()
 
 
-def obtener_fondo(video):
+def obtener_fondo(video, ancho, alto):
+    """
+    Calcula el fondo estático de un vídeo <video> promediando todos sus frames.
+    Devuelve la imagen del fondo redimensionada al tamaño indicado (<ancho>, <alto>).
+    """
     cap = leer_video(video)
 
     frames = [] # Donde añadiremos todos los frames del vídeo
@@ -62,12 +66,12 @@ def obtener_fondo(video):
             break
 
         # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (400, 300))
+        frame = cv2.resize(frame, (ancho, alto))
 
         # Convertimos a float para evitar saturación en la suma
         frames.append(frame.astype(np.float32))
 
-        # Para cerrar el vídeo
+        # Para terminar el proceso
         if cv2.waitKey(5) & 0xFF == 27: # Código ACII esc == 27:
             break
 
@@ -83,7 +87,8 @@ def obtener_fondo(video):
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
     cv2.imwrite("images/fondo_sin_coches.jpg", promedio) # Escribe la imagen generada en la ruta descrita
-    return promedio
+    fondo = cv2.resize(promedio, (ancho, alto)) # Redimensiona la imagen del fondo según los parametros
+    return fondo
 
 
 def quitar_fondo(video, fondo):
