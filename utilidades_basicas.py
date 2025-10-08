@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 
 
 def leer_video(video):
+    """
+    Lee un vídeo desde la ruta <video> y devuelve el objeto de captura (cv2.VideoCapture).
+    Muestra un mensaje de error y finaliza el programa si no se puede abrir.
+    """
     cap = cv2.VideoCapture(video)
 
     # Mensaje por si no podemos acceder al archivo
@@ -14,7 +18,8 @@ def leer_video(video):
     return cap
 
 
-def visualizar_video(video):
+def visualizar_video(video, ancho, alto):
+    """Muestra un vídeo <video> redimensionado (<ancho>, <alto>) hasta que termine o se pulse ESC"""
     cap = leer_video(video)
 
     # Visualizar el vídeo
@@ -28,7 +33,7 @@ def visualizar_video(video):
             break
 
         # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (1000, 700))
+        frame = cv2.resize(frame, (ancho, alto))
 
         cv2.imshow('Video original', frame)
         
