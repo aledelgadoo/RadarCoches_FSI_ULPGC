@@ -5,10 +5,11 @@ from utilidades_basicas import *
 
 def main():
     video = 'images/trafico.mp4'
+    fondo = 'images/fondo_sin_coches.jpg'
+    ancho, alto = (800, 450) # Parámetros para la redimensión
     # visualizar_video(video)
     # fondo = obtener_fondo(video)
-    fondo = 'images/fondo_sin_coches.jpg'
-    quitar_fondo(video, fondo)
+    quitar_fondo(video, fondo, ancho, alto)
 
 
 if __name__ == "__main__":
