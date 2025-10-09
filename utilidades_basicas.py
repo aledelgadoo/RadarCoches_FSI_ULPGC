@@ -91,7 +91,7 @@ def obtener_fondo(video, ancho, alto):
     return fondo
 
 
-def quitar_fondo(video, fondo, ancho, alto):
+def quitar_fondo(video, fondo, ancho, alto):    
     """
     Resta el fondo estático de un vídeo para resaltar los objetos en movimiento.
     <video>: ruta del archivo de vídeo
@@ -121,6 +121,48 @@ def quitar_fondo(video, fondo, ancho, alto):
 
         # Para cerrar el vídeo
         if cv2.waitKey(5) & 0xFF == 27: # Código ACII esc == 27:
+            break
+
+    cv2.destroyAllWindows()
+    cap.release()
+
+def quitar_fondo_umbralizado(video, fondo, ancho, alto):    
+    """
+    Resta el fondo estático de un vídeo y umbraliza la diferencia
+    para resaltar únicamente los objetos en movimiento (vehículos).
+    <video>: ruta del archivo de vídeo
+    <fondo>: ruta de la imagen de fondo
+    <ancho>, <alto>: dimensiones a las que se redimensionarán ambos
+    """
+    cap = leer_video(video)
+
+    # Leemos la imagen del fondo, la redimensionamos y la convertimos al formato uint8
+    fondo = cv2.resize(cv2.imread(fondo), (ancho, alto)).astype(np.uint8)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Fin del vídeo")
+            break
+
+        frame = cv2.resize(frame, (ancho, alto))
+
+        # Restamos el fondo
+        diferencia = cv2.absdiff(frame, fondo)
+
+        # Convertimos a escala de grises (solo necesitamos intensidad, no color)
+        gris = cv2.cvtColor(diferencia, cv2.COLOR_BGR2GRAY)
+
+        # Aplicamos un umbral para destacar las zonas con diferencias significativas
+        # (ajusta 50 según la iluminación del vídeo)
+        _, umbral = cv2.threshold(gris, 50, 255, cv2.THRESH_BINARY)
+
+
+        # Mostramos resultados
+        cv2.imshow('Diferencia', diferencia)
+        cv2.imshow('Movimiento detectado', umbral)
+
+        if cv2.waitKey(5) & 0xFF == 27:  # ESC para salir
             break
 
     cv2.destroyAllWindows()
