@@ -178,6 +178,12 @@ def detectar_coches(video, fondo, ancho, alto):
     cap = leer_video(video)
     fondo = cv2.resize(cv2.imread(fondo), (ancho, alto)).astype(np.uint8)
 
+    # Definimos la ROI según el vídeo
+    x1, y1, x2, y2 = 0, 125, 800, 450
+
+    # Zona a ignorar (timestamp u overlay de texto)
+    x_txt, y_txt, w_txt, h_txt = 675, 400, 30, 20  # coordenadas del recuadro de los números
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -185,13 +191,18 @@ def detectar_coches(video, fondo, ancho, alto):
             break
 
         frame = cv2.resize(frame, (ancho, alto))
+
+        # Eliminar el timestamp (píxeles cambiantes de la fecha/hora)
+        cv2.rectangle(frame, (x_txt, y_txt), (x_txt + w_txt, y_txt + h_txt), (0, 0, 0), -1)
+        cv2.rectangle(fondo, (x_txt, y_txt), (x_txt + w_txt, y_txt + h_txt), (0, 0, 0), -1)
+
         diferencia = cv2.absdiff(frame, fondo)
 
         # Convertimos a escala de grises (solo necesitamos intensidad, no color)
         gris = cv2.cvtColor(diferencia, cv2.COLOR_BGR2GRAY)
 
         # Umbralizamos para quedarnos con zonas de movimiento
-        _, umbral = cv2.threshold(gris, 40, 255, cv2.THRESH_BINARY)
+        _, umbral = cv2.threshold(gris, 33, 255, cv2.THRESH_BINARY)
         # cv2.threshold binariza gris: todos los píxeles con valor > 40 pasan a 255 (blanco), el resto a 0 (negro)
         # 40 es el umbral (sensibilidad): más bajo → más sensible; más alto → menos falsas detecciones
         # <_> es el umbral usado (lo ignoramos), <umbral> es la imagen binaria
@@ -204,8 +215,13 @@ def detectar_coches(video, fondo, ancho, alto):
         umbral = cv2.morphologyEx(umbral, cv2.MORPH_CLOSE, kernel)  # cierra huecos
         umbral = cv2.morphologyEx(umbral, cv2.MORPH_OPEN, kernel)   # quita ruido
 
+        #Aplicamos la máscara de la ROI
+        mask = np.zeros_like(umbral)
+        mask[y1:y2, x1:x2] = 255
+        umbral_roi = cv2.bitwise_and(umbral, mask)
+
         # Buscamos contornos (posibles coches)
-        contornos, _ = cv2.findContours(umbral, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contornos, _ = cv2.findContours(umbral_roi, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # cv2.findContours detecta los contornos en la imagen binaria umbral
         # cv2.RETR_EXTERNAL toma solo los contornos externos (ignora contornos interiores)
         # cv2.CHAIN_APPROX_SIMPLE comprime los puntos del contorno para ahorrar memoria
@@ -213,10 +229,12 @@ def detectar_coches(video, fondo, ancho, alto):
 
         for cont in contornos:
             area = cv2.contourArea(cont) # Iteramos cada contorno y calculamos su área en píxeles
-            if area > 350:  # filtra ruido: ajustamos este umbral según el vídeo
+            if area > 40:  # filtra ruido: ajustamos este umbral según el vídeo
                 x, y, w, h = cv2.boundingRect(cont) # cv2.boundingRect devuelve el rectángulo mínimo alineado a los ejes que contiene el contorno
                 # x, y = coordenadas de la esquina superior izquierda; w, h = ancho y alto del rectángulo
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # Dibuja un rectángulo verde
+        
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) #ROI
 
         # Ventanas a mostrar
         cv2.imshow('Coches detectados', frame)
