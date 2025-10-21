@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-from utilidades_basicas import *
-from funciones_avanzadas import *
+from funcionesV1 import *
+from funcionesV2 import *
 
 def main():
     video = 'images/trafico.mp4'
