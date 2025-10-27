@@ -11,7 +11,7 @@ class Vehiculo(ABC):
     """
     _next_id = 0  # Atributo de clase para manejar las ids
 
-    def __init__(self, id, centroide, bbox, frame_img, frame_num):
+    def __init__(self, centroide, bbox, frame_img, frame_num):
         self.id = Vehiculo._next_id   # id del vehiculo al instanciar
         Vehiculo._next_id += 1        # Manejamos las ids con el atributo estático
 
@@ -52,7 +52,6 @@ class Vehiculo(ABC):
         """
         return self.distancia_a(otro_centroide) < umbral_distancia
     
-    @abstractmethod
     def tipo(self):
         """Devuelve el tipo de vehículo (debe implementarse en subclases)."""
         pass
