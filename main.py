@@ -19,8 +19,8 @@ def main():
 
     # Parámetros de Tracking (IDs)
     p_umbral_dist_base = 50     # (Default: 50) Dist. máx. para asociar coche.
-    p_max_frames_perdido = 10   # (Default: 10) Paciencia antes de borrar ID.
-    p_frames_confirmacion = 7   # (Default: 3) Frames que espera para confirmar que es vehículo.
+    p_max_frames_perdido = 20   # (Default: 10) Paciencia antes de borrar ID.
+    p_frames_confirmacion = 8   # (Default: 3) Frames que espera para confirmar que es vehículo.
     
     
     # --- Llamada a la función V2 con todos los parámetros ---

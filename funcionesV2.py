@@ -5,12 +5,12 @@ from gestor_vehiculos import *
 
 def detectar_cochesV2(ruta_video, background_img_path, 
                        escala=0.5, 
-                       umbral_sensibilidad=50, 
-                       min_area_base=60, 
-                       kernel_size_base=5, 
+                       umbral_sensibilidad=30, 
+                       min_area_base=250, 
+                       kernel_size_base=7, 
                        umbral_dist_base=50, 
-                       max_frames_perdido=10,
-                       frames_para_confirmar=3):
+                       max_frames_perdido=20,
+                       frames_para_confirmar=8):
     """
     Procesa un vídeo detectando y siguiendo vehículos.
     Todos los parámetros de detección y seguimiento se pasan como argumentos.
