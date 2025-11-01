@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from funcionesV1 import *
 from gestor_vehiculos import *
+from vehiculos import *
 
 def detectar_cochesV2(ruta_video, background_img_path, 
                        escala=0.5, 
@@ -88,8 +89,13 @@ def detectar_cochesV2(ruta_video, background_img_path,
         gestor.actualizar(detecciones, frame, frame_num)
 
         # --- Dibujar resultados ---
+        # Cálculo de contadores
+        contador_actual = 0
+        vehiculos_a_dibujar = [] # Lista de coches ya confirmados
+        
         for v in gestor.vehiculos_activos():
             if v.frames_activo > frames_para_confirmar:
+                contador_actual += 1 # Aumentamos el contador de vehículos actuales
                 x, y, w, h = map(int, v.bbox)
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 cv2.putText(frame, f"ID {v.id}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1)
@@ -101,6 +107,15 @@ def detectar_cochesV2(ruta_video, background_img_path,
                             (int(v.historial[i][0]), int(v.historial[i][1])),
                             (0, 255, 255), 1)
         
+        # Dibujar contadores en pantalla
+        # Obtenemos el contador histórico (total de IDs únicos creados)
+        contador_historico = Vehiculo._next_id
+        # (Ajusta las coordenadas (20, 50) y (20, 90) si lo necesitas)
+        cv2.putText(frame, f"Vehiculos Activos: {contador_actual}", (65, 30), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+        cv2.putText(frame, f"Total Historico: {contador_historico}", (65, 70), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+
         # Dibujamos la ROI en el frame original para debug
         cv2.rectangle(frame, (roi_escalada[2], roi_escalada[0]), (roi_escalada[3], roi_escalada[1]), (255, 0, 0), 2)
 
