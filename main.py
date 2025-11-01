@@ -10,7 +10,7 @@ def main():
     # --- Panel de control de parámetros ---
     p_escala = 0.5              
     p_umbral_sensibilidad = 30  
-    p_min_area_base = 230       
+    p_min_area_base = 250       
     p_kernel_size_base = 7      
     p_umbral_dist_base = 50     # Dist. máx. para asociar (Detección vs Predicción)
     p_max_frames_perdido = 10   # Paciencia para oclusión
@@ -107,5 +107,4 @@ def probar_trafico2():
     )
 
 if __name__ == "__main__":
-    # --- Llamada a la función V2 (con valores directos para probar) ---
-    probar_trafico2()
+    main()
