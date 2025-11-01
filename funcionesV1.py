@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
 
 def leer_video(video):
@@ -46,49 +47,60 @@ def visualizar_video(video, ancho, alto):
     # Release el frame
     cap.release()
 
-
-def obtener_fondo(video, ancho, alto):
+def obtener_fondo(video_path):
     """
-    Calcula el fondo estático de un vídeo <video> promediando todos sus frames.
-    Devuelve la imagen del fondo redimensionada al tamaño indicado (<ancho>, <alto>).
+    Calcula el fondo estático de un vídeo promediando todos sus frames.
+    Función 'limpia': no imprime nada, solo calcula y devuelve el frame promedio.
+    Guarda en memoria la imagen del fondo.
     """
-    cap = leer_video(video)
+    cap = leer_video(video_path)
 
-    frames = [] # Donde añadiremos todos los frames del vídeo
+    suma_frames = None
+    contador_frames = 0
 
-    # Recorremos todo el vídeo para almacenar los frames
     while(True):
         ret, frame = cap.read()
         
-        # Comprobamos que se esté visualizando correctamente
         if not ret:
-            print("Fin del vídeo")
-            break
+            break # Fin del vídeo
 
-        # Ajustamos para que el vídeo ocupe menos
-        frame = cv2.resize(frame, (ancho, alto))
+        if suma_frames is None:
+            suma_frames = frame.astype(np.float64)
+        else:
+            suma_frames += frame.astype(np.float64)
+        
+        contador_frames += 1
 
-        # Convertimos a float para evitar saturación en la suma
-        frames.append(frame.astype(np.float32))
-
-        # Para terminar el proceso
-        if cv2.waitKey(5) & 0xFF == 27: # Código ACII esc == 27:
-            break
-
-    cv2.destroyAllWindows()
     cap.release()
+    cv2.destroyAllWindows() # Aunque no muestra, libera recursos
 
-    # Calcular el promedio
-    # np.mean -> hace la media de todos los frames
-    # .astype -> convierte los float al formato que usa opencv (uint8)
-    promedio =  np.mean(frames, axis=0).astype(np.uint8)
+    if suma_frames is None or contador_frames == 0:
+        print("Error en calcular_fondo_promedio: No se leyeron frames.")
+        return None
 
-    # cv2.imshow("Fondo promedio", promedio) # Título que se muestra en la ventana
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    cv2.imwrite("images/fondo_sin_coches.jpg", promedio) # Escribe la imagen generada en la ruta descrita
-    fondo = cv2.resize(promedio, (ancho, alto)) # Redimensiona la imagen del fondo según los parametros
-    return fondo
+    # Calculamos el promedio
+    promedio = (suma_frames / contador_frames).astype(np.uint8)
+    
+    # --- Lógica de guardado con Regex ---
+    
+    # Extraemos el nombre base (ej: 'trafico' de 'images/trafico.mp4')
+    # r'(?:.*/)?' -> Coincide opcionalmente con la ruta (ej: 'images/')
+    # r'([^.]+)'  -> Captura el nombre del archivo (todo menos el '.')
+    # r'\.[^.]*$' -> Coincide con la extensión (ej: '.mp4')
+    match = re.search(r'(?:.*/)?([^.]+)\.[^.]*$', video_path)
+    
+    if match:
+        filename_base = match.group(1) # Esto será 'trafico'
+    else:
+        # Un plan B simple si el regex falla
+        filename_base = "fondo_calculado" 
+
+    # Creamos la ruta de salida correcta
+    ruta_salida = f'images/({filename_base})-fondo_sin_coches.jpg'
+
+    # Guardamos el resultado
+    cv2.imwrite(ruta_salida, promedio)
+    print(f"Fondo guardado en '{ruta_salida}' (calculado con {contador_frames} frames).")
 
 
 def quitar_fondo(video, fondo, ancho, alto):    

@@ -24,6 +24,8 @@ class Vehiculo(ABC):
         self.frames_perdido = 0          # Contador de frames consecutivos sin verlo
         self.historial = [centroide]     # Guarda trayectoria para velocidad o debug futuro
 
+        self.frames_activo = 1           # Contador de cuántos frames ha sido visto en total
+
     def distancia_a(self, otro_centroide):
         """Calcula la distancia euclídea entre el centro actual y otro."""
         return np.linalg.norm(self.centroide - np.array(otro_centroide))
@@ -38,6 +40,8 @@ class Vehiculo(ABC):
         self.frame_num = frame_num
         self.frames_perdido = 0
         self.historial.append(nuevo_centroide)
+
+        self.frames_activo += 1  # Cada vez que se actualiza, incrementamos su "confirmación"
 
     def marcar_perdido(self, limite):
         """Incrementa el contador de frames perdidos."""
