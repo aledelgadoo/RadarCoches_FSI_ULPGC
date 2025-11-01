@@ -16,6 +16,8 @@ def main():
     p_max_frames_perdido = 10   # Paciencia para oclusión
     p_frames_confirmacion = 5   
     p_roi_base = [280, 965, 0, 1920]
+    p_metodo_fondo = 'dinamico' # 'estatico' (con imagen) o 'dinamico' (con MOG2)
+    p_frames_calentamiento_mog2 = 100 # Cuántos frames "ignorar" al inicio para que MOG2 aprenda el fondo
 
     p_filtro_sentido = None
     p_mostrar_texto_velocidad = True
@@ -48,6 +50,8 @@ def main():
         umbral_dist_base=p_umbral_dist_base,
         max_frames_perdido=p_max_frames_perdido,
         frames_para_confirmar=p_frames_confirmacion,
+        metodo_fondo=p_metodo_fondo,
+        frames_calentamiento=p_frames_calentamiento_mog2,
 
         filtro_sentido=p_filtro_sentido,
         mostrar_texto_velocidad=p_mostrar_texto_velocidad,

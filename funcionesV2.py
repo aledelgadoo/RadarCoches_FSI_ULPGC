@@ -13,6 +13,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                        umbral_dist_base=50, 
                        max_frames_perdido=20,
                        frames_para_confirmar=8,
+                       metodo_fondo='estatico',
+                       frames_calentamiento=100,
                        
                        filtro_sentido=None,
                        mostrar_texto_velocidad=False,
@@ -39,7 +41,18 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
 
     # Redimensionamos según la escala
     new_size = (int(original_width * escala), int(original_height * escala))
-    fondo_redimensionado = cv2.resize(cv2.imread(ruta_fondo), new_size).astype(np.uint8)
+
+    if metodo_fondo == 'estatico':
+        fondo_redimensionado = cv2.resize(cv2.imread(ruta_fondo), new_size).astype(np.uint8)
+        print("Usando método de fondo ESTÁTICO.")
+
+    elif metodo_fondo == 'dinamico':
+        # Método nuevo: creamos un sustractor MOG2
+        # history: nº de frames que usa para "aprender" el fondo.
+        # varThreshold: sensibilidad (como 'umbral_sensibilidad')
+        sustractor_fondo = cv2.createBackgroundSubtractorMOG2(history=500, varThreshold=50, detectShadows=True)
+        print("Usando método de fondo DINÁMICO (MOG2).")
+    
 
     # --- Definir la ROI ---
     if roi_base:
@@ -102,9 +115,30 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         frame = cv2.resize(frame, new_size)
 
         # --- Detección ---
-        diff = cv2.absdiff(frame, fondo_redimensionado) # Resta el fondo estático al frame actual
-        diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY) # Convierte la imagen de diferencia a escala de grises
-        _, fgmask = cv2.threshold(diff, umbral_sensibilidad, 255, cv2.THRESH_BINARY) # Binariza la imagen
+        if metodo_fondo == 'dinamico' and frame_num < frames_calentamiento:
+            # Si usamos MOG2 y estamos en el periodo de calentamiento...
+            # 1. Alimentamos al sustractor para que aprenda
+            sustractor_fondo.apply(frame)
+            # 2. Mensaje de que está cargando
+            print('Obteniendo el fondo dinámicamente, calentando...') 
+            if cv2.waitKey(1) & 0xFF == 27: break
+            # 3. Saltamos el resto del bucle (no detectar, no trackear)
+            continue
+        
+        # --- Detección (¡CORREGIDO CON IF/ELIF!) ---
+        if metodo_fondo == 'estatico':
+            # Método 1: Sustracción de fondo estática
+            diff = cv2.absdiff(frame, fondo_redimensionado)
+            diff = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+            _, fgmask = cv2.threshold(diff, umbral_sensibilidad, 255, cv2.THRESH_BINARY)
+        
+        elif metodo_fondo == 'dinamico':
+            # Método 2: Sustracción dinámica (MOG2)
+            # (Se ejecuta solo si frame_num >= frames_calentamiento)
+            fgmask_con_sombras = sustractor_fondo.apply(frame)
+            # Eliminamos las sombras (pixeles grises, valor 127)
+            _, fgmask = cv2.threshold(fgmask_con_sombras, 250, 255, cv2.THRESH_BINARY)
+        
         fgmask = cv2.bitwise_and(fgmask, mask_roi) # Aplica la máscara ROI (pone a negro todo lo que esté fuera de la región)
         
         # Operaciones morfológicas para limpiar la máscara
