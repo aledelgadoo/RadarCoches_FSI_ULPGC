@@ -16,14 +16,14 @@ def main():
     p_max_frames_perdido = 10   # Paciencia para oclusión
     p_frames_confirmacion = 5   
     p_roi_base = [280, 965, 0, 1920]
-    p_metodo_fondo = 'dinamico' # 'estatico' (con imagen) o 'dinamico' (con MOG2)
+    p_metodo_fondo = 'estatico' # 'estatico' (con imagen) o 'dinamico' (con MOG2)
     p_frames_calentamiento_mog2 = 100 # Cuántos frames "ignorar" al inicio para que MOG2 aprenda el fondo
 
     p_filtro_sentido = None
     p_mostrar_texto_velocidad = True
     p_mostrar_texto_sentido = True
     p_mostrar_id = True
-    p_mostrar_roi = False
+    p_mostrar_roi = True
 
     p_mostrar_contador_activos = True
     p_mostrar_contador_historico = True
@@ -75,5 +75,37 @@ def main():
     # --- Llamadas antiguas ---
     # obtener_fondo(ruta_video) # Para (re)generar el fondo
 
+def probar_trafico2():
+    detectar_cochesV2(
+        ruta_video='images/trafico2.mp4', # Usa la variable 'video' definida arriba
+        ruta_fondo='images/(trafico2)-fondo_sin_coches.jpg', # Usa la variable 'fondo' definida arriba
+        escala=0.5,
+        roi_base=[450, 1080, 0, 1920],
+        umbral_sensibilidad=30,
+        min_area_base=3500,
+        kernel_size_base=7,
+        umbral_dist_base=50,
+        max_frames_perdido=20,
+        frames_para_confirmar=8,
+        metodo_fondo='estatico',
+        frames_calentamiento=100,
+        filtro_sentido=None,
+        mostrar_texto_velocidad=True,
+        mostrar_texto_sentido=True,
+        mostrar_id=True,
+        mostrar_roi=True,
+        mostrar_contador_activos=True,
+        mostrar_contador_historico=True,
+        mostrar_contador_subiendo=True,
+        mostrar_contador_bajando=True,
+        area_moto_max_base=5000,
+        area_coche_max_base=25000,
+        mostrar_contador_motos=True,
+        mostrar_contador_coches=True,
+        mostrar_contador_camiones=True,
+        mostrar_tipo_coche=True
+    )
+
 if __name__ == "__main__":
-    main()
+    # --- Llamada a la función V2 (con valores directos para probar) ---
+    probar_trafico2()
