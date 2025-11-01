@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
 
 def leer_video(video):
@@ -80,11 +81,26 @@ def obtener_fondo(video_path):
     # Calculamos el promedio
     promedio = (suma_frames / contador_frames).astype(np.uint8)
     
-    # Guardamos el resultado
-    cv2.imwrite(f'{video_path}_fondo_sin_coches.jpg', promedio) # Haciendo referencia al video del que proviene
-    print(f"Fondo guardado en '{video_path}_fondo_sin_coches.jpg' (calculado con {contador_frames} frames).")
+    # --- Lógica de guardado con Regex ---
+    
+    # Extraemos el nombre base (ej: 'trafico' de 'images/trafico.mp4')
+    # r'(?:.*/)?' -> Coincide opcionalmente con la ruta (ej: 'images/')
+    # r'([^.]+)'  -> Captura el nombre del archivo (todo menos el '.')
+    # r'\.[^.]*$' -> Coincide con la extensión (ej: '.mp4')
+    match = re.search(r'(?:.*/)?([^.]+)\.[^.]*$', video_path)
+    
+    if match:
+        filename_base = match.group(1) # Esto será 'trafico'
+    else:
+        # Un plan B simple si el regex falla
+        filename_base = "fondo_calculado" 
 
-    return promedio
+    # Creamos la ruta de salida correcta
+    ruta_salida = f'images/({filename_base})-fondo_sin_coches.jpg'
+
+    # Guardamos el resultado
+    cv2.imwrite(ruta_salida, promedio)
+    print(f"Fondo guardado en '{ruta_salida}' (calculado con {contador_frames} frames).")
 
 
 def quitar_fondo(video, fondo, ancho, alto):    
