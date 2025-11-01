@@ -100,7 +100,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 velocidad_mag = np.linalg.norm(v.velocidad) # Calcula la magnitud del vector velocidad (Pitágoras) para tener un solo número (píxeles/frame)
                 
                 # 2. Si el sentido del coche aún no está definido
-                if not v.sentido:
+                if not v.sentido and v.frames_activo > 13: # Solo fijamos la velocidad si el coche ya lleva >12 frames
                     # Comprobamos si la velocidad en Y es lo bastante fuerte para "fijarlo"
                     # Umbral +-0.5
                     if vy < -0.5: 
@@ -114,7 +114,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 
                 # --- Si pasa todos los filtros, lo contamos y dibujamos ---
                 contador_actual += 1
-                
+
                 color_sentido = (255, 0, 0) # Azul (por defecto, si aún es None)
                 texto_sentido = '(...)'     # Texto por defecto
                 
