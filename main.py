@@ -14,8 +14,8 @@ def main():
     
     # Parámetros de Detección (Máscara)
     p_umbral_sensibilidad = 30  # (Default: 50) Más bajo = más sensible (más ruido).
-    p_min_area_base = 200        # (Default: 60) Área mínima (para escala 1.0).
-    p_kernel_size_base = 6      # (Default: 5) Tamaño del kernel (para escala 1.0).
+    p_min_area_base = 250        # (Default: 60) Área mínima (para escala 1.0).
+    p_kernel_size_base = 7      # (Default: 5) Tamaño del kernel (para escala 1.0).
 
     # Parámetros de Tracking (IDs)
     p_umbral_dist_base = 50     # (Default: 50) Dist. máx. para asociar coche.
