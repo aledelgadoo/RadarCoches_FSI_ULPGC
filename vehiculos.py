@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 import numpy as np
-import math
 import cv2
 
 from abc import ABC, abstractmethod
@@ -36,7 +35,7 @@ class Coche(Vehiculo):
         self.activo = True
         self.frames_perdido = 0
         self.frames_activo = 1
-        self.ya_contado_salida = False # Dejamos esto por si acaso
+        self.sentido = None
 
         # --- INICIO DEL FILTRO DE KALMAN ---
         # 1. Creamos el filtro
