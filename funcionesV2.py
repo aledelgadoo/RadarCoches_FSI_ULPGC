@@ -9,7 +9,8 @@ def detectar_cochesV2(ruta_video, background_img_path,
                        min_area_base=60, 
                        kernel_size_base=5, 
                        umbral_dist_base=50, 
-                       max_frames_perdido=10):
+                       max_frames_perdido=10,
+                       frames_para_confirmar=3):
     """
     Procesa un vídeo detectando y siguiendo vehículos.
     Todos los parámetros de detección y seguimiento se pasan como argumentos.
@@ -88,16 +89,17 @@ def detectar_cochesV2(ruta_video, background_img_path,
 
         # --- Dibujar resultados ---
         for v in gestor.vehiculos_activos():
-            x, y, w, h = map(int, v.bbox)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(frame, f"ID {v.id}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1)
-            
-            trazado_min = max(1, len(v.historial) - 19)
-            for i in range(trazado_min, len(v.historial)):
-                cv2.line(frame,
-                         (int(v.historial[i-1][0]), int(v.historial[i-1][1])),
-                         (int(v.historial[i][0]), int(v.historial[i][1])),
-                         (0, 255, 255), 1)
+            if v.frames_activo > frames_para_confirmar:
+                x, y, w, h = map(int, v.bbox)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.putText(frame, f"ID {v.id}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,0), 1)
+                
+                trazado_min = max(1, len(v.historial) - 19)
+                for i in range(trazado_min, len(v.historial)):
+                    cv2.line(frame,
+                            (int(v.historial[i-1][0]), int(v.historial[i-1][1])),
+                            (int(v.historial[i][0]), int(v.historial[i][1])),
+                            (0, 255, 255), 1)
         
         # Dibujamos la ROI en el frame original para debug
         cv2.rectangle(frame, (roi_escalada[2], roi_escalada[0]), (roi_escalada[3], roi_escalada[1]), (255, 0, 0), 2)

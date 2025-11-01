@@ -10,7 +10,7 @@ def main():
     fondo = 'images/(trafico)-fondo_sin_coches.jpg' 
     
     # --- NUEVO: Panel de control de parámetros ---
-    p_escala = 0.7              # 0.5=50%, 1.0=100%. Afecta a todo lo demás.
+    p_escala = 0.5              # 0.5=50%, 1.0=100%. Afecta a todo lo demás.
     
     # Parámetros de Detección (Máscara)
     p_umbral_sensibilidad = 30  # (Default: 50) Más bajo = más sensible (más ruido).
@@ -20,6 +20,7 @@ def main():
     # Parámetros de Tracking (IDs)
     p_umbral_dist_base = 50     # (Default: 50) Dist. máx. para asociar coche.
     p_max_frames_perdido = 10   # (Default: 10) Paciencia antes de borrar ID.
+    p_frames_confirmacion = 7   # (Default: 3) Frames que espera para confirmar que es vehículo.
     
     
     # --- Llamada a la función V2 con todos los parámetros ---
@@ -31,7 +32,8 @@ def main():
         min_area_base=p_min_area_base,
         kernel_size_base=p_kernel_size_base,
         umbral_dist_base=p_umbral_dist_base,
-        max_frames_perdido=p_max_frames_perdido
+        max_frames_perdido=p_max_frames_perdido,
+        frames_para_confirmar=p_frames_confirmacion
     )
 
     # --- Llamadas antiguas (comentadas) ---
