@@ -15,7 +15,8 @@ def main():
     p_umbral_dist_base = 50     # Dist. máx. para asociar (Detección vs Predicción)
     p_max_frames_perdido = 10   # Paciencia para oclusión
     p_frames_confirmacion = 5   
-    p_roi_base = [280, 965, 0, 1920] 
+    p_roi_base = [280, 965, 0, 1920]
+    p_filtro_sentido = 'BAJA'
     
     
     # --- Llamada a la función V2 ---
@@ -30,6 +31,7 @@ def main():
         umbral_dist_base=p_umbral_dist_base,
         max_frames_perdido=p_max_frames_perdido,
         frames_para_confirmar=p_frames_confirmacion,
+        filtro_sentido=p_filtro_sentido
     )
 
     # --- Llamadas antiguas ---

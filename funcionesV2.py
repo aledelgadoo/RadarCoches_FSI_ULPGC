@@ -12,7 +12,9 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                        kernel_size_base=7, 
                        umbral_dist_base=50, 
                        max_frames_perdido=20,
-                       frames_para_confirmar=8):
+                       frames_para_confirmar=8,
+                       
+                       filtro_sentido=None):
     
     # --- Inicialización ---
     cap = leer_video(ruta_video)
@@ -89,8 +91,6 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
             
             # Solo dibujamos y contamos los coches "confirmados"
             if v.frames_activo > frames_para_confirmar:
-                
-                contador_actual += 1
             
                 x, y, w, h = map(int, v.bbox) # Obtiene la caja (bbox) del vehículo y convierte sus coordenadas a enteros
                 cx, cy = v.centroide # Obtiene el centroide (x, y) suavizado por el Filtro de Kalman
@@ -108,7 +108,13 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                     elif vy > 0.5:
                         v.sentido = 'BAJA' # Fijado
                 
-                # 3. Contamos y dibujamos usando el 'sentido' almacenado en el objeto
+                # 3. Filtro de Sentido
+                if filtro_sentido is not None and v.sentido != filtro_sentido:
+                    continue
+                
+                # --- Si pasa todos los filtros, lo contamos y dibujamos ---
+                contador_actual += 1
+                
                 color_sentido = (255, 0, 0) # Azul (por defecto, si aún es None)
                 texto_sentido = '(...)'     # Texto por defecto
                 
