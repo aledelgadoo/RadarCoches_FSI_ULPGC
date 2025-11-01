@@ -1,15 +1,13 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 from funcionesV1 import *
 from funcionesV2 import *
 
 def main():
-    video = 'images/trafico.mp4'
-    # Asegúrate que el nombre del fondo coincide con el que generaste
-    fondo = 'images/(trafico)-fondo_sin_coches.jpg' 
+    p_ruta_video = 'images/trafico.mp4'
+    p_ruta_fondo = 'images/(trafico)-fondo_sin_coches.jpg' 
     
-    # --- Panel de control de parámetros (con Kalman) ---
+    # --- Panel de control de parámetros ---
     p_escala = 0.5              
     p_umbral_sensibilidad = 30  
     p_min_area_base = 230       
@@ -17,13 +15,15 @@ def main():
     p_umbral_dist_base = 50     # Dist. máx. para asociar (Detección vs Predicción)
     p_max_frames_perdido = 10   # Paciencia para oclusión
     p_frames_confirmacion = 5   
+    p_roi_base = [280, 965, 0, 1920] 
     
     
-    # --- Llamada a la función V2 (AHORA MÁS CORTA) ---
+    # --- Llamada a la función V2 ---
     detectar_cochesV2(
-        video, 
-        fondo, 
+        ruta_video=p_ruta_video, 
+        ruta_fondo=p_ruta_fondo, 
         escala=p_escala,
+        roi_base=p_roi_base,
         umbral_sensibilidad=p_umbral_sensibilidad,
         min_area_base=p_min_area_base,
         kernel_size_base=p_kernel_size_base,
@@ -32,10 +32,8 @@ def main():
         frames_para_confirmar=p_frames_confirmacion,
     )
 
-    # --- Llamadas antiguas (comentadas) ---
-    # (Tu código de V1...)
-    # obtener_fondo_cli(video) # Para (re)generar el fondo
+    # --- Llamadas antiguas ---
+    # obtener_fondo(ruta_video) # Para (re)generar el fondo
 
 if __name__ == "__main__":
     main()
-
