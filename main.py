@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 from funcionesV1 import *
 from funcionesV2 import *
@@ -10,6 +9,7 @@ def main():
     # --- Panel de control de parámetros ---
     p_escala = 0.5              
     p_umbral_sensibilidad = 30  
+    p_umbral_fusion_base = 60
     p_min_area_base = 250       
     p_kernel_size_base = 7      
     p_umbral_dist_base = 50     # Dist. máx. para asociar (Detección vs Predicción)
@@ -18,12 +18,16 @@ def main():
     p_roi_base = [280, 965, 0, 1920]
     p_metodo_fondo = 'estatico' # 'estatico' (con imagen) o 'dinamico' (con MOG2)
     p_frames_calentamiento_mog2 = 100 # Cuántos frames "ignorar" al inicio para que MOG2 aprenda el fondo
+    p_orientacion_via = 'horizontal' # 'vertical' (suben / bajan) o 'horizontal' (izq. / der.)
 
     p_filtro_sentido = None
     p_mostrar_texto_velocidad = True
     p_mostrar_texto_sentido = True
     p_mostrar_id = True
     p_mostrar_roi = True
+    p_colorear_por = None # Opciones: None, 'sentido', 'tipo', 'velocidad'
+    p_vel_min_color = 0.4 # La velocidad MÍNIMA para empezar el gradiente (se verá Azul)
+    p_vel_max_color = 10.0  # La velocidad MÁXIMA (se verá Rojo)
 
     p_mostrar_contador_activos = True
     p_mostrar_contador_historico = True
@@ -45,6 +49,7 @@ def main():
         escala=p_escala,
         roi_base=p_roi_base,
         umbral_sensibilidad=p_umbral_sensibilidad,
+        umbral_fusion_base=p_umbral_fusion_base,
         min_area_base=p_min_area_base,
         kernel_size_base=p_kernel_size_base,
         umbral_dist_base=p_umbral_dist_base,
@@ -52,12 +57,16 @@ def main():
         frames_para_confirmar=p_frames_confirmacion,
         metodo_fondo=p_metodo_fondo,
         frames_calentamiento=p_frames_calentamiento_mog2,
+        orientacion_via=p_orientacion_via,
 
         filtro_sentido=p_filtro_sentido,
         mostrar_texto_velocidad=p_mostrar_texto_velocidad,
         mostrar_texto_sentido=p_mostrar_texto_sentido,
         mostrar_id=p_mostrar_id,
         mostrar_roi=p_mostrar_roi,
+        colorear_por=p_colorear_por,
+        vel_min_color=p_vel_min_color,
+        vel_max_color=p_vel_max_color,
 
         mostrar_contador_activos=p_mostrar_contador_activos,
         mostrar_contador_historico=p_mostrar_contador_historico,
@@ -83,7 +92,7 @@ def probar_trafico2():
         roi_base=[450, 1080, 0, 1920],
         umbral_sensibilidad=30,
         min_area_base=3500,
-        kernel_size_base=7,
+        kernel_size_base=20,
         umbral_dist_base=50,
         max_frames_perdido=20,
         frames_para_confirmar=8,

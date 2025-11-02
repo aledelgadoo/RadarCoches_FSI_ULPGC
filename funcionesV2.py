@@ -4,10 +4,68 @@ from funcionesV1 import *
 from gestor_vehiculos import *
 from vehiculos import *
 
+
+def _calcular_centroide_bbox(bbox):
+    """Calcula el centroide (x_c, y_c) de un bounding box (x, y, w, h)."""
+    x, y, w, h = bbox
+    return np.array([x + w / 2, y + h / 2])
+
+
+def fusionar_detecciones_cercanas(detecciones, umbral_distancia):
+    """
+    Recorre una lista de bboxes y fusiona las que estén demasiado cerca.
+    Se queda con la BBox más grande del grupo fusionado.
+    """
+    detecciones_limpias = []
+    # Usamos un set para guardar los índices de las bboxes que ya hemos "usado"
+    indices_usados = set()
+
+    for i in range(len(detecciones)):
+        if i in indices_usados:
+            continue # Esta bbox ya fue fusionada con una anterior
+
+        bbox_actual = detecciones[i]
+        area_actual = bbox_actual[2] * bbox_actual[3]
+        centroide_actual = _calcular_centroide_bbox(bbox_actual)
+        
+        # Esta es la BBox que guardaremos (la más grande del grupo)
+        bbox_a_mantener = bbox_actual
+        
+        indices_usados.add(i) # Marcarla como usada
+
+        # Ahora, comparamos esta bbox con todas las demás
+        for j in range(i + 1, len(detecciones)):
+            if j in indices_usados:
+                continue
+
+            bbox_comparar = detecciones[j]
+            centroide_comparar = _calcular_centroide_bbox(bbox_comparar)
+            
+            # Calculamos la distancia euclidiana
+            dist = np.linalg.norm(centroide_actual - centroide_comparar)
+
+            if dist < umbral_distancia:
+                # ¡Están demasiado cerca! Las consideramos parte del mismo objeto.
+                indices_usados.add(j) # Marcamos la otra bbox como usada
+                
+                # Comprobamos si la nueva es más grande
+                area_comparar = bbox_comparar[2] * bbox_comparar[3]
+                if area_comparar > area_actual:
+                    # Si es más grande, actualizamos la que vamos a guardar
+                    bbox_a_mantener = bbox_comparar
+                    area_actual = area_comparar
+        
+        # Al final del bucle 'j', añadimos la bbox más grande del grupo
+        detecciones_limpias.append(bbox_a_mantener)
+
+    return detecciones_limpias
+
+
 def detectar_cochesV2(ruta_video, ruta_fondo, 
                        escala=0.5, 
                        roi_base=None,
                        umbral_sensibilidad=30, 
+                       umbral_fusion_base=40,
                        min_area_base=250, 
                        kernel_size_base=7, 
                        umbral_dist_base=50, 
@@ -15,12 +73,16 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                        frames_para_confirmar=8,
                        metodo_fondo='estatico',
                        frames_calentamiento=100,
+                       orientacion_via='vertical',
                        
                        filtro_sentido=None,
                        mostrar_texto_velocidad=False,
                        mostrar_texto_sentido=False,
                        mostrar_id=True,
                        mostrar_roi=True,
+                       colorear_por=None,
+                       vel_min_color=0.4,
+                       vel_max_color=10,
                        
                        mostrar_contador_activos=True,
                        mostrar_contador_historico=True,
@@ -72,6 +134,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
     kernel_size_val = int(np.ceil(kernel_size_base * escala)) // 2 * 2 + 1 # Ajusta el kernel (1D) a la escala y fuerza que sea impar
     kernel_escalado = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_val, kernel_size_val)) # Crea la matriz del kernel con el tamaño escalado
     umbral_dist_escalado = umbral_dist_base * escala # Ajusta la distancia (1D) de seguimiento a la escala
+    umbral_fusion_escalado = umbral_fusion_base * escala # Ajusta la distancia (1D) de la escala
 
     area_moto_max_escalada = area_moto_max_base * (escala**2)
     area_coche_max_escalada = area_coche_max_base * (escala**2)
@@ -105,6 +168,18 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         max_frames_perdido=max_frames_perdido
     )
 
+    # --- Lógica de control orientación ---
+    if orientacion_via == 'vertical':
+        label_sentido_1 = 'Subiendo'
+        label_sentido_2 = 'Bajando'
+        tag_sentido_1 = 'SUBE'
+        tag_sentido_2 = 'BAJA'
+    else: # Asumimos 'horizontal'
+        label_sentido_1 = 'Izquierda'
+        label_sentido_2 = 'Derecha'
+        tag_sentido_1 = 'IZQUIERDA'
+        tag_sentido_2 = 'DERECHA'
+
     frame_num = 0 # Inicializa el contador de frames
 
     while True:
@@ -114,7 +189,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         frame_num += 1 # Incrementa el contador de fotogramas
         frame = cv2.resize(frame, new_size)
 
-        # --- Detección ---
+        # --- Detección dinámica (atascos) ---
         if metodo_fondo == 'dinamico' and frame_num < frames_calentamiento:
             # Si usamos MOG2 y estamos en el periodo de calentamiento...
             # 1. Alimentamos al sustractor para que aprenda
@@ -125,7 +200,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
             # 3. Saltamos el resto del bucle (no detectar, no trackear)
             continue
         
-        # --- Detección (¡CORREGIDO CON IF/ELIF!) ---
+        # --- Detección  ---
         if metodo_fondo == 'estatico':
             # Método 1: Sustracción de fondo estática
             diff = cv2.absdiff(frame, fondo_redimensionado)
@@ -146,21 +221,25 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel_escalado) # Elimina pequeños puntos blancos (ruido)
 
         contornos, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # Encuentra todos los contornos (blobs blancos) en la máscara
-        detecciones = [] # Inicializa una lista vacía para guardar las detecciones de este frame
-        
-        for c in contornos: # Recorre cada contorno (blob) encontrado
+
+        # 1. Creamos la lista "sucia" de detecciones
+        detecciones_sucias = []
+        for c in contornos:
             if cv2.contourArea(c) < min_area_escalada:
                 continue
-            x, y, w, h = cv2.boundingRect(c) # Calcula la caja delimitadora (bounding box) del contorno
-            detecciones.append((x, y, w, h)) # Añade las coordenadas de la caja a la lista de detecciones
+            x, y, w, h = cv2.boundingRect(c)
+            detecciones_sucias.append((x, y, w, h))
         
-        # --- Actualizar el gestor ---
-        gestor.actualizar(detecciones, frame, frame_num)
+        # 2. Aplicamos la FUSIÓN para limpiar la lista
+        detecciones_limpias = fusionar_detecciones_cercanas(detecciones_sucias, umbral_fusion_escalado)
+
+        # 3. Actualizamos el gestor solo con las detecciones limpias
+        gestor.actualizar(detecciones_limpias, frame, frame_num)
         
         # --- Contadores en tiempo real ---
         contador_actual = 0
-        contador_suben_rt = 0
-        contador_bajan_rt = 0
+        contador_sentido1_rt = 0
+        contador_sentido2_rt = 0
 
         # --- Contadores de tipo ---
         contador_motos = 0
@@ -184,10 +263,12 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 if not v.sentido and v.frames_activo > 13: # Solo fijamos la velocidad si el coche ya lleva >12 frames
                     # Comprobamos si la velocidad en Y es lo bastante fuerte para "fijarlo"
                     # Umbral +-0.5
-                    if vy < -0.5: 
-                        v.sentido = 'SUBE' # Fijado
-                    elif vy > 0.5:
-                        v.sentido = 'BAJA' # Fijado
+                    if orientacion_via == 'vertical':
+                        if vy < -0.5: v.sentido = tag_sentido_1 # SUBE
+                        elif vy > 0.5: v.sentido = tag_sentido_2 # BAJA
+                    else: # 'horizontal'
+                        if vx < -0.5: v.sentido = tag_sentido_1 # IZQUIERDA
+                        elif vx > 0.5: v.sentido = tag_sentido_2 # DERECHA
                 
                 # 3. Filtro de Sentido
                 if filtro_sentido is not None and v.sentido != filtro_sentido:
@@ -221,21 +302,55 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 elif v.tipo == 'Coche': contador_coches += 1
                 elif v.tipo == 'Camion': contador_camiones += 1
 
-                color_sentido = (255, 0, 0) # Azul (por defecto, si aún es None)
-                texto_sentido = '(...)'     # Texto por defecto
+                # Contamos por sentido
+                if v.sentido == tag_sentido_1:
+                    contador_sentido1_rt += 1
+                elif v.sentido == tag_sentido_2:
+                    contador_sentido2_rt += 1
                 
-                if v.sentido == 'SUBE':
-                    contador_suben_rt += 1
-                    color_sentido = (0, 255, 0) # Verde
-                    texto_sentido = 'SUBE'
-                elif v.sentido == 'BAJA':
-                    contador_bajan_rt += 1
-                    color_sentido = (0, 0, 255) # Rojo
-                    texto_sentido = 'BAJA'
-
                 # --- Dibujar en pantalla ---
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), grosor_grande)
+                color_caja = (0, 255, 0) # Verde por defecto
+                # -- Lógica de color de la caja --
+                if colorear_por == 'sentido':
+                    if v.sentido == tag_sentido_1: color_caja = (0, 255, 0) # Verde
+                    elif v.sentido == tag_sentido_2: color_caja = (0, 0, 255) # Rojo
+                    else: color_caja = (255, 0, 0) # Azul (detenido/indefinido)
+            
+                elif colorear_por == 'tipo':
+                    if v.tipo == 'Moto': color_caja = (255, 0, 255) # Magenta
+                    elif v.tipo == 'Camion': color_caja = (255, 255, 0) # Cyan
+                    else: color_caja = (0, 255, 0) # Coche (Verde)
+            
+                elif colorear_por == 'velocidad':
+                    # Normalizamos la velocidad (0.0 = lento, 1.0 = rápido)
+                    vel_norm = (velocidad_mag - vel_min_color) / (vel_max_color - vel_min_color)
+                    vel_norm = np.clip(vel_norm, 0.0, 1.0)
+                    
+                    # Creamos un gradiente simple Azul -> Rojo
+                    # (OpenCV es BGR, no RGB)
+                    R = int(vel_norm * 255)
+                    G = 0
+                    B = int((1 - vel_norm) * 255)
+                    color_caja = (B, G, R)
+
+                # --- Dibujamos ---
+                cv2.rectangle(frame, (x, y), (x + w, y + h), color_caja, grosor_grande)
                 
+                # Mostrar sentido
+                if mostrar_texto_sentido:
+                    color_sentido = (255, 0, 0)
+                    texto_sentido = '(...)'
+                    if v.sentido == tag_sentido_1:
+                        color_sentido = (0, 255, 0) # Verde
+                        texto_sentido = tag_sentido_1
+                    elif v.sentido == tag_sentido_2:
+                        color_sentido = (0, 0, 255) # Rojo
+                        texto_sentido = tag_sentido_2
+                
+                    y_offset = y + h + int(15 * escala)
+                    if mostrar_texto_velocidad:
+                        y_offset += int(15 * escala)
+
                 # ID del vehículo (este está por ENCIMA de la caja, así que no afecta al offset)
                 if mostrar_id:
                     cv2.putText(frame, f"ID {v.id}", (x, y - int(10 * escala)), # Escalamos también el y-10
@@ -276,8 +391,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 255), grosor_grande)
         
         # Columna 2 (Subiendo)
-        if mostrar_contador_subiendo:
-            cv2.putText(frame, f"Subiendo: {contador_suben_rt}", (pos_x_col2, pos_y), 
+        if mostrar_contador_subiendo: # (El flag se sigue llamando así, pero la etiqueta es dinámica)
+            cv2.putText(frame, f"{label_sentido_1}: {contador_sentido1_rt}", (pos_x_col2, pos_y), 
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 0), grosor_grande)
 
         # --- Fila 2 ---
@@ -287,8 +402,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 255), grosor_grande)
         
         # Columna 2 (Bajando)
-        if mostrar_contador_bajando:
-            cv2.putText(frame, f"Bajando: {contador_bajan_rt}", (pos_x_col2, pos_y + salto_y), 
+        if mostrar_contador_bajando: # (Idem)
+            cv2.putText(frame, f"{label_sentido_2}: {contador_sentido2_rt}", (pos_x_col2, pos_y + salto_y), 
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 0, 255), grosor_grande)
 
         # -- Fila 3 ---
@@ -315,7 +430,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         cv2.imshow("Máscara", fgmask)
         cv2.imshow("Video Original", frame)
 
-        if cv2.waitKey(30) & 0xFF == 27:  # ESC
+        if cv2.waitKey(30) & 0xFF == 27:  # ESC, ajustar waitKey para velocidad reproducción
             break
 
     cap.release()

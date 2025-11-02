@@ -4,8 +4,7 @@ import cv2
 class Vehiculo():
     """
     Representa un vehículo individual.
-    Ahora incluye un Filtro de Kalman para predecir su movimiento 
-    y estimar su velocidad.
+    Incluye un Filtro de Kalman para predecir su movimiento y estimar su velocidad.
     """
 
     _next_id = 0
@@ -63,7 +62,7 @@ class Vehiculo():
             [0, 1, 0, 0],
             [0, 0, 5, 0],  # Incertidumbre en vx
             [0, 0, 0, 5]   # Incertidumbre en vy
-        ], dtype=np.float32) * 1e-3 # Ajustar este 1e-3 (0.001)
+        ], dtype=np.float32) * 1e-3 # Valor por defecto 1e-3 (0.001)
 
         # 6. Ruido de la Medición (R)
         # Incertidumbre de nuestro detector (blob)
@@ -71,7 +70,7 @@ class Vehiculo():
         self.kalman.measurementNoiseCov = np.array([
             [1, 0],
             [0, 1]
-        ], dtype=np.float32) * 1e-1 # Ajustar este 1e-1 (0.1)
+        ], dtype=np.float32) * 1e-1 # Valor por defecto 1e-1 (0.1)
         
         # --- FIN DEL FILTRO DE KALMAN ---
 
@@ -102,6 +101,3 @@ class Vehiculo():
         self.frames_perdido += 1
         if self.frames_perdido > limite:
             self.activo = False
-    
-    # --- Funciones que ya no usaremos (historial, distancia_a, etc.) ---
-    # (Las borramos para que no haya confusión)
