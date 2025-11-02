@@ -73,6 +73,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                        frames_para_confirmar=8,
                        metodo_fondo='estatico',
                        frames_calentamiento=100,
+                       orientacion_via='vertical',
                        
                        filtro_sentido=None,
                        mostrar_texto_velocidad=False,
@@ -164,6 +165,18 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         max_frames_perdido=max_frames_perdido
     )
 
+    # --- Lógica de control orientación ---
+    if orientacion_via == 'vertical':
+        label_sentido_1 = 'Subiendo (RT)'
+        label_sentido_2 = 'Bajando (RT)'
+        tag_sentido_1 = 'SUBE'
+        tag_sentido_2 = 'BAJA'
+    else: # Asumimos 'horizontal'
+        label_sentido_1 = 'Izquierda (RT)'
+        label_sentido_2 = 'Derecha (RT)'
+        tag_sentido_1 = 'IZQUIERDA'
+        tag_sentido_2 = 'DERECHA'
+
     frame_num = 0 # Inicializa el contador de frames
 
     while True:
@@ -222,8 +235,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         
         # --- Contadores en tiempo real ---
         contador_actual = 0
-        contador_suben_rt = 0
-        contador_bajan_rt = 0
+        contador_sentido1_rt = 0
+        contador_sentido2_rt = 0
 
         # --- Contadores de tipo ---
         contador_motos = 0
@@ -247,10 +260,12 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 if not v.sentido and v.frames_activo > 13: # Solo fijamos la velocidad si el coche ya lleva >12 frames
                     # Comprobamos si la velocidad en Y es lo bastante fuerte para "fijarlo"
                     # Umbral +-0.5
-                    if vy < -0.5: 
-                        v.sentido = 'SUBE' # Fijado
-                    elif vy > 0.5:
-                        v.sentido = 'BAJA' # Fijado
+                    if orientacion_via == 'vertical':
+                        if vy < -0.5: v.sentido = tag_sentido_1 # SUBE
+                        elif vy > 0.5: v.sentido = tag_sentido_2 # BAJA
+                    else: # 'horizontal'
+                        if vx < -0.5: v.sentido = tag_sentido_1 # IZQUIERDA
+                        elif vx > 0.5: v.sentido = tag_sentido_2 # DERECHA
                 
                 # 3. Filtro de Sentido
                 if filtro_sentido is not None and v.sentido != filtro_sentido:
@@ -284,18 +299,26 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 elif v.tipo == 'Coche': contador_coches += 1
                 elif v.tipo == 'Camion': contador_camiones += 1
 
-                color_sentido = (255, 0, 0) # Azul (por defecto, si aún es None)
-                texto_sentido = '(...)'     # Texto por defecto
-                
-                if v.sentido == 'SUBE':
-                    contador_suben_rt += 1
-                    color_sentido = (0, 255, 0) # Verde
-                    texto_sentido = 'SUBE'
-                elif v.sentido == 'BAJA':
-                    contador_bajan_rt += 1
-                    color_sentido = (0, 0, 255) # Rojo
-                    texto_sentido = 'BAJA'
+                if v.sentido == tag_sentido_1:
+                    contador_sentido1_rt += 1
+                elif v.sentido == tag_sentido_2:
+                    contador_sentido2_rt += 1
 
+                # Mostrar sentido
+                if mostrar_texto_sentido:
+                    color_sentido = (255, 0, 0)
+                    texto_sentido = '(...)'
+                    if v.sentido == tag_sentido_1:
+                        color_sentido = (0, 255, 0) # Verde
+                        texto_sentido = tag_sentido_1
+                    elif v.sentido == tag_sentido_2:
+                        color_sentido = (0, 0, 255) # Rojo
+                        texto_sentido = tag_sentido_2
+                
+                    y_offset = y + h + int(15 * escala) # (Ajusta esto según tus 'if' de velocidad)
+                    if mostrar_texto_velocidad:
+                        y_offset += int(15 * escala)
+                
                 # --- Dibujar en pantalla ---
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), grosor_grande)
                 
@@ -339,8 +362,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 255), grosor_grande)
         
         # Columna 2 (Subiendo)
-        if mostrar_contador_subiendo:
-            cv2.putText(frame, f"Subiendo: {contador_suben_rt}", (pos_x_col2, pos_y), 
+        if mostrar_contador_subiendo: # (El flag se sigue llamando así, pero la etiqueta es dinámica)
+            cv2.putText(frame, f"{label_sentido_1}: {contador_sentido1_rt}", (pos_x_col2, pos_y), 
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 0), grosor_grande)
 
         # --- Fila 2 ---
@@ -350,8 +373,8 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 255, 255), grosor_grande)
         
         # Columna 2 (Bajando)
-        if mostrar_contador_bajando:
-            cv2.putText(frame, f"Bajando: {contador_bajan_rt}", (pos_x_col2, pos_y + salto_y), 
+        if mostrar_contador_bajando: # (Idem)
+            cv2.putText(frame, f"{label_sentido_2}: {contador_sentido2_rt}", (pos_x_col2, pos_y + salto_y), 
                         cv2.FONT_HERSHEY_SIMPLEX, font_grande, (0, 0, 255), grosor_grande)
 
         # -- Fila 3 ---

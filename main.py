@@ -19,6 +19,7 @@ def main():
     p_roi_base = [280, 965, 0, 1920]
     p_metodo_fondo = 'estatico' # 'estatico' (con imagen) o 'dinamico' (con MOG2)
     p_frames_calentamiento_mog2 = 100 # Cuántos frames "ignorar" al inicio para que MOG2 aprenda el fondo
+    p_orientacion_via = 'horizontal' # 'vertical' (suben / bajan) o 'horizontal' (izq. / der.)
 
     p_filtro_sentido = None
     p_mostrar_texto_velocidad = True
@@ -54,6 +55,7 @@ def main():
         frames_para_confirmar=p_frames_confirmacion,
         metodo_fondo=p_metodo_fondo,
         frames_calentamiento=p_frames_calentamiento_mog2,
+        orientacion_via=p_orientacion_via,
 
         filtro_sentido=p_filtro_sentido,
         mostrar_texto_velocidad=p_mostrar_texto_velocidad,
