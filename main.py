@@ -10,6 +10,7 @@ def main():
     # --- Panel de control de parámetros ---
     p_escala = 0.5              
     p_umbral_sensibilidad = 30  
+    p_umbral_fusion_base = 60
     p_min_area_base = 250       
     p_kernel_size_base = 7      
     p_umbral_dist_base = 50     # Dist. máx. para asociar (Detección vs Predicción)
@@ -45,6 +46,7 @@ def main():
         escala=p_escala,
         roi_base=p_roi_base,
         umbral_sensibilidad=p_umbral_sensibilidad,
+        umbral_fusion_base=p_umbral_fusion_base,
         min_area_base=p_min_area_base,
         kernel_size_base=p_kernel_size_base,
         umbral_dist_base=p_umbral_dist_base,
@@ -83,7 +85,7 @@ def probar_trafico2():
         roi_base=[450, 1080, 0, 1920],
         umbral_sensibilidad=30,
         min_area_base=3500,
-        kernel_size_base=7,
+        kernel_size_base=20,
         umbral_dist_base=50,
         max_frames_perdido=20,
         frames_para_confirmar=8,

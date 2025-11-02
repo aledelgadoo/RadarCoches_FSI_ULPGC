@@ -4,10 +4,68 @@ from funcionesV1 import *
 from gestor_vehiculos import *
 from vehiculos import *
 
+
+def _calcular_centroide_bbox(bbox):
+    """Calcula el centroide (x_c, y_c) de un bounding box (x, y, w, h)."""
+    x, y, w, h = bbox
+    return np.array([x + w / 2, y + h / 2])
+
+
+def fusionar_detecciones_cercanas(detecciones, umbral_distancia):
+    """
+    Recorre una lista de bboxes y fusiona las que estén demasiado cerca.
+    Se queda con la BBox más grande del grupo fusionado.
+    """
+    detecciones_limpias = []
+    # Usamos un set para guardar los índices de las bboxes que ya hemos "usado"
+    indices_usados = set()
+
+    for i in range(len(detecciones)):
+        if i in indices_usados:
+            continue # Esta bbox ya fue fusionada con una anterior
+
+        bbox_actual = detecciones[i]
+        area_actual = bbox_actual[2] * bbox_actual[3]
+        centroide_actual = _calcular_centroide_bbox(bbox_actual)
+        
+        # Esta es la BBox que guardaremos (la más grande del grupo)
+        bbox_a_mantener = bbox_actual
+        
+        indices_usados.add(i) # Marcarla como usada
+
+        # Ahora, comparamos esta bbox con todas las demás
+        for j in range(i + 1, len(detecciones)):
+            if j in indices_usados:
+                continue
+
+            bbox_comparar = detecciones[j]
+            centroide_comparar = _calcular_centroide_bbox(bbox_comparar)
+            
+            # Calculamos la distancia euclidiana
+            dist = np.linalg.norm(centroide_actual - centroide_comparar)
+
+            if dist < umbral_distancia:
+                # ¡Están demasiado cerca! Las consideramos parte del mismo objeto.
+                indices_usados.add(j) # Marcamos la otra bbox como usada
+                
+                # Comprobamos si la nueva es más grande
+                area_comparar = bbox_comparar[2] * bbox_comparar[3]
+                if area_comparar > area_actual:
+                    # Si es más grande, actualizamos la que vamos a guardar
+                    bbox_a_mantener = bbox_comparar
+                    area_actual = area_comparar
+        
+        # Al final del bucle 'j', añadimos la bbox más grande del grupo
+        detecciones_limpias.append(bbox_a_mantener)
+
+    return detecciones_limpias
+
+
 def detectar_cochesV2(ruta_video, ruta_fondo, 
                        escala=0.5, 
                        roi_base=None,
                        umbral_sensibilidad=30, 
+                       umbral_fusion_base=40,
                        min_area_base=250, 
                        kernel_size_base=7, 
                        umbral_dist_base=50, 
@@ -72,6 +130,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
     kernel_size_val = int(np.ceil(kernel_size_base * escala)) // 2 * 2 + 1 # Ajusta el kernel (1D) a la escala y fuerza que sea impar
     kernel_escalado = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_val, kernel_size_val)) # Crea la matriz del kernel con el tamaño escalado
     umbral_dist_escalado = umbral_dist_base * escala # Ajusta la distancia (1D) de seguimiento a la escala
+    umbral_fusion_escalado = umbral_fusion_base * escala # Ajusta la distancia (1D) de la escala
 
     area_moto_max_escalada = area_moto_max_base * (escala**2)
     area_coche_max_escalada = area_coche_max_base * (escala**2)
@@ -146,16 +205,20 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         fgmask = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel_escalado) # Elimina pequeños puntos blancos (ruido)
 
         contornos, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) # Encuentra todos los contornos (blobs blancos) en la máscara
-        detecciones = [] # Inicializa una lista vacía para guardar las detecciones de este frame
-        
-        for c in contornos: # Recorre cada contorno (blob) encontrado
+
+        # 1. Creamos la lista "sucia" de detecciones
+        detecciones_sucias = []
+        for c in contornos:
             if cv2.contourArea(c) < min_area_escalada:
                 continue
-            x, y, w, h = cv2.boundingRect(c) # Calcula la caja delimitadora (bounding box) del contorno
-            detecciones.append((x, y, w, h)) # Añade las coordenadas de la caja a la lista de detecciones
+            x, y, w, h = cv2.boundingRect(c)
+            detecciones_sucias.append((x, y, w, h))
         
-        # --- Actualizar el gestor ---
-        gestor.actualizar(detecciones, frame, frame_num)
+        # 2. Aplicamos la FUSIÓN para limpiar la lista
+        detecciones_limpias = fusionar_detecciones_cercanas(detecciones_sucias, umbral_fusion_escalado)
+
+        # 3. Actualizamos el gestor solo con las detecciones limpias
+        gestor.actualizar(detecciones_limpias, frame, frame_num)
         
         # --- Contadores en tiempo real ---
         contador_actual = 0
