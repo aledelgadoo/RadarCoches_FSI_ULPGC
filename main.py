@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 from funcionesV1 import *
 from funcionesV2 import *
@@ -26,7 +25,7 @@ def main():
     p_mostrar_texto_sentido = True
     p_mostrar_id = True
     p_mostrar_roi = True
-    p_colorear_por = 'velocidad' # Opciones: None, 'sentido', 'tipo', 'velocidad'
+    p_colorear_por = None # Opciones: None, 'sentido', 'tipo', 'velocidad'
     p_vel_min_color = 0.4 # La velocidad MÍNIMA para empezar el gradiente (se verá Azul)
     p_vel_max_color = 10.0  # La velocidad MÁXIMA (se verá Rojo)
 

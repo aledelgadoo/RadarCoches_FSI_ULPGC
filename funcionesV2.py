@@ -189,7 +189,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         frame_num += 1 # Incrementa el contador de fotogramas
         frame = cv2.resize(frame, new_size)
 
-        # --- Detección ---
+        # --- Detección dinámica (atascos) ---
         if metodo_fondo == 'dinamico' and frame_num < frames_calentamiento:
             # Si usamos MOG2 y estamos en el periodo de calentamiento...
             # 1. Alimentamos al sustractor para que aprenda
@@ -200,7 +200,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
             # 3. Saltamos el resto del bucle (no detectar, no trackear)
             continue
         
-        # --- Detección (¡CORREGIDO CON IF/ELIF!) ---
+        # --- Detección  ---
         if metodo_fondo == 'estatico':
             # Método 1: Sustracción de fondo estática
             diff = cv2.absdiff(frame, fondo_redimensionado)
@@ -302,29 +302,15 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                 elif v.tipo == 'Coche': contador_coches += 1
                 elif v.tipo == 'Camion': contador_camiones += 1
 
+                # Contamos por sentido
                 if v.sentido == tag_sentido_1:
                     contador_sentido1_rt += 1
                 elif v.sentido == tag_sentido_2:
                     contador_sentido2_rt += 1
-
-                # Mostrar sentido
-                if mostrar_texto_sentido:
-                    color_sentido = (255, 0, 0)
-                    texto_sentido = '(...)'
-                    if v.sentido == tag_sentido_1:
-                        color_sentido = (0, 255, 0) # Verde
-                        texto_sentido = tag_sentido_1
-                    elif v.sentido == tag_sentido_2:
-                        color_sentido = (0, 0, 255) # Rojo
-                        texto_sentido = tag_sentido_2
-                
-                    y_offset = y + h + int(15 * escala) # (Ajusta esto según tus 'if' de velocidad)
-                    if mostrar_texto_velocidad:
-                        y_offset += int(15 * escala)
                 
                 # --- Dibujar en pantalla ---
                 color_caja = (0, 255, 0) # Verde por defecto
-                # Lógica de color de la caja
+                # -- Lógica de color de la caja --
                 if colorear_por == 'sentido':
                     if v.sentido == tag_sentido_1: color_caja = (0, 255, 0) # Verde
                     elif v.sentido == tag_sentido_2: color_caja = (0, 0, 255) # Rojo
@@ -347,9 +333,24 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
                     B = int((1 - vel_norm) * 255)
                     color_caja = (B, G, R)
 
-                # --- ¡Dibujamos el rectángulo CON EL NUEVO COLOR! ---
+                # --- Dibujamos ---
                 cv2.rectangle(frame, (x, y), (x + w, y + h), color_caja, grosor_grande)
                 
+                # Mostrar sentido
+                if mostrar_texto_sentido:
+                    color_sentido = (255, 0, 0)
+                    texto_sentido = '(...)'
+                    if v.sentido == tag_sentido_1:
+                        color_sentido = (0, 255, 0) # Verde
+                        texto_sentido = tag_sentido_1
+                    elif v.sentido == tag_sentido_2:
+                        color_sentido = (0, 0, 255) # Rojo
+                        texto_sentido = tag_sentido_2
+                
+                    y_offset = y + h + int(15 * escala)
+                    if mostrar_texto_velocidad:
+                        y_offset += int(15 * escala)
+
                 # ID del vehículo (este está por ENCIMA de la caja, así que no afecta al offset)
                 if mostrar_id:
                     cv2.putText(frame, f"ID {v.id}", (x, y - int(10 * escala)), # Escalamos también el y-10
@@ -429,7 +430,7 @@ def detectar_cochesV2(ruta_video, ruta_fondo,
         cv2.imshow("Máscara", fgmask)
         cv2.imshow("Video Original", frame)
 
-        if cv2.waitKey(30) & 0xFF == 27:  # ESC
+        if cv2.waitKey(30) & 0xFF == 27:  # ESC, ajustar waitKey para velocidad reproducción
             break
 
     cap.release()
