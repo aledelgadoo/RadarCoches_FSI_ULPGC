@@ -1,9 +1,8 @@
 import numpy as np
-from funcionesV1 import *
-from funcionesV2 import *
+from functions import *
 
 def main():
-    p_ruta_video = 'images/trafico.mp4'
+    p_ruta_video = 'videos/trafico.mp4'
     p_ruta_fondo = 'images/(trafico)-fondo_sin_coches.jpg' 
     
     # --- Panel de control de parámetros ---
@@ -90,7 +89,7 @@ def main():
 
 def probar_trafico2():
     detectar_cochesV2(
-        ruta_video='images/trafico2.mp4', # Usa la variable 'video' definida arriba
+        ruta_video='videos/trafico2.mp4', # Usa la variable 'video' definida arriba
         ruta_fondo='images/(trafico2)-fondo_sin_coches.jpg', # Usa la variable 'fondo' definida arriba
         escala=0.5,
         roi_base=[450, 1080, 0, 1920],

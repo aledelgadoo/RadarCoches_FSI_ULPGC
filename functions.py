@@ -1,8 +1,79 @@
 import numpy as np
 import cv2
-from funcionesV1 import *
+import re
 from gestor_vehiculos import *
 from vehiculos import *
+
+
+def leer_video(video):
+    """
+    Lee un vídeo desde la ruta <video> y devuelve el objeto de captura (cv2.VideoCapture).
+    Muestra un mensaje de error y finaliza el programa si no se puede abrir.
+    """
+    cap = cv2.VideoCapture(video)
+
+    # Mensaje por si no podemos acceder al archivo
+    if not cap.isOpened():
+        print("Error al intentar leer el vídeo!")
+        exit()
+    
+    return cap
+
+
+def obtener_fondo(video):
+    """
+    Calcula el fondo estático de un vídeo promediando todos sus frames.
+    Función 'limpia': no imprime nada, solo calcula y devuelve el frame promedio.
+    Guarda en memoria la imagen del fondo.
+    """
+    cap = leer_video(video)
+
+    suma_frames = None
+    contador_frames = 0
+
+    while(True):
+        ret, frame = cap.read()
+        
+        if not ret:
+            break # Fin del vídeo
+
+        if suma_frames is None:
+            suma_frames = frame.astype(np.float64)
+        else:
+            suma_frames += frame.astype(np.float64)
+        
+        contador_frames += 1
+
+    cap.release()
+    cv2.destroyAllWindows() # Aunque no muestra, libera recursos
+
+    if suma_frames is None or contador_frames == 0:
+        print("Error en calcular_fondo_promedio: No se leyeron frames.")
+        return None
+
+    # Calculamos el promedio
+    promedio = (suma_frames / contador_frames).astype(np.uint8)
+    
+    # --- Lógica de guardado con Regex ---
+    
+    # Extraemos el nombre base (ej: 'trafico' de 'images/trafico.mp4')
+    # r'(?:.*/)?' -> Coincide opcionalmente con la ruta (ej: 'images/')
+    # r'([^.]+)'  -> Captura el nombre del archivo (todo menos el '.')
+    # r'\.[^.]*$' -> Coincide con la extensión (ej: '.mp4')
+    match = re.search(r'(?:.*/)?([^.]+)\.[^.]*$', video)
+    
+    if match:
+        filename_base = match.group(1) # Esto será 'trafico'
+    else:
+        # Un plan B simple si el regex falla
+        filename_base = "fondo_calculado" 
+
+    # Creamos la ruta de salida correcta
+    ruta_salida = f'images/({filename_base})-fondo_sin_coches.jpg'
+
+    # Guardamos el resultado
+    cv2.imwrite(ruta_salida, promedio)
+    print(f"Fondo guardado en '{ruta_salida}' (calculado con {contador_frames} frames).")
 
 
 def _calcular_centroide_bbox(bbox):
