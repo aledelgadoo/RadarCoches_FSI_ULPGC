@@ -8,17 +8,12 @@ from vehiculos import *
 def leer_video(video):
     """
     Lee un vídeo desde la ruta <video> y devuelve el objeto de captura (cv2.VideoCapture).
-    Muestra un mensaje de error y finaliza el programa si no se puede abrir.
     """
     cap = cv2.VideoCapture(video)
-
-    # Mensaje por si no podemos acceder al archivo
     if not cap.isOpened():
-        print("Error al intentar leer el vídeo!")
+        print(f"Error! No se pudo abrir el vídeo en: {video}")
         exit()
-    
     return cap
-
 
 def obtener_fondo(video):
     """
@@ -27,13 +22,15 @@ def obtener_fondo(video):
     Guarda en memoria la imagen del fondo.
     """
     cap = leer_video(video)
+    if not cap.isOpened():
+        print(f"Error en obtener_fondo: No se pudo abrir el vídeo: {video}")
+        return
 
     suma_frames = None
     contador_frames = 0
 
     while(True):
         ret, frame = cap.read()
-        
         if not ret:
             break # Fin del vídeo
 
@@ -45,88 +42,82 @@ def obtener_fondo(video):
         contador_frames += 1
 
     cap.release()
-    cv2.destroyAllWindows() # Aunque no muestra, libera recursos
+    cv2.destroyAllWindows() 
 
     if suma_frames is None or contador_frames == 0:
         print("Error en calcular_fondo_promedio: No se leyeron frames.")
-        return None
+        return
 
-    # Calculamos el promedio
     promedio = (suma_frames / contador_frames).astype(np.uint8)
     
     # --- Lógica de guardado con Regex ---
-    
-    # Extraemos el nombre base (ej: 'trafico' de 'images/trafico.mp4')
-    # r'(?:.*/)?' -> Coincide opcionalmente con la ruta (ej: 'images/')
-    # r'([^.]+)'  -> Captura el nombre del archivo (todo menos el '.')
-    # r'\.[^.]*$' -> Coincide con la extensión (ej: '.mp4')
     match = re.search(r'(?:.*/)?([^.]+)\.[^.]*$', video)
-    
     if match:
-        filename_base = match.group(1) # Esto será 'trafico'
+        filename_base = match.group(1)
     else:
-        # Un plan B simple si el regex falla
         filename_base = "fondo_calculado" 
 
-    # Creamos la ruta de salida correcta
-    ruta_salida = f'images/({filename_base})-fondo_sin_coches.jpg'
+    # Corregido: sin paréntesis en el nombre
+    ruta_salida = f'images/{filename_base}-fondo_sin_coches.jpg' 
 
-    # Guardamos el resultado
-    cv2.imwrite(ruta_salida, promedio)
-    print(f"Fondo guardado en '{ruta_salida}' (calculado con {contador_frames} frames).")
-
+    # --- ¡ARREGLO PARA CARACTERES ESPECIALES (º)! ---
+    # (cv2.imwrite no maneja bien 'º' en las rutas de Windows)
+    try:
+        is_success, buffer = cv2.imencode(".jpg", promedio)
+        if not is_success:
+            raise Exception("cv2.imencode falló")
+        
+        # Escribimos los bytes en el fichero usando Python nativo
+        with open(ruta_salida, 'wb') as f:
+            f.write(buffer)
+            
+        print(f"Fondo guardado en '{ruta_salida}' (calculado con {contador_frames} frames).")
+    
+    except Exception as e:
+        print(f"Error al guardar el fondo (error de path): {e}")
+        raise e # Lanzamos el error para que la GUI lo capture
 
 def _calcular_centroide_bbox(bbox):
     """Calcula el centroide (x_c, y_c) de un bounding box (x, y, w, h)."""
     x, y, w, h = bbox
     return np.array([x + w / 2, y + h / 2])
 
-
 def fusionar_detecciones_cercanas(detecciones, umbral_distancia):
     """
     Recorre una lista de bboxes y fusiona las que estén demasiado cerca.
     Se queda con la BBox más grande del grupo fusionado.
     """
+    if umbral_distancia == 0: # Opción para desactivar
+        return detecciones
+        
     detecciones_limpias = []
-    # Usamos un set para guardar los índices de las bboxes que ya hemos "usado"
     indices_usados = set()
 
     for i in range(len(detecciones)):
         if i in indices_usados:
-            continue # Esta bbox ya fue fusionada con una anterior
+            continue
 
         bbox_actual = detecciones[i]
         area_actual = bbox_actual[2] * bbox_actual[3]
         centroide_actual = _calcular_centroide_bbox(bbox_actual)
-        
-        # Esta es la BBox que guardaremos (la más grande del grupo)
         bbox_a_mantener = bbox_actual
-        
-        indices_usados.add(i) # Marcarla como usada
+        indices_usados.add(i)
 
-        # Ahora, comparamos esta bbox con todas las demás
         for j in range(i + 1, len(detecciones)):
             if j in indices_usados:
                 continue
 
             bbox_comparar = detecciones[j]
             centroide_comparar = _calcular_centroide_bbox(bbox_comparar)
-            
-            # Calculamos la distancia euclidiana
             dist = np.linalg.norm(centroide_actual - centroide_comparar)
 
             if dist < umbral_distancia:
-                # ¡Están demasiado cerca! Las consideramos parte del mismo objeto.
-                indices_usados.add(j) # Marcamos la otra bbox como usada
-                
-                # Comprobamos si la nueva es más grande
+                indices_usados.add(j)
                 area_comparar = bbox_comparar[2] * bbox_comparar[3]
                 if area_comparar > area_actual:
-                    # Si es más grande, actualizamos la que vamos a guardar
                     bbox_a_mantener = bbox_comparar
                     area_actual = area_comparar
         
-        # Al final del bucle 'j', añadimos la bbox más grande del grupo
         detecciones_limpias.append(bbox_a_mantener)
 
     return detecciones_limpias
