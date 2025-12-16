@@ -76,8 +76,8 @@ class GestorVehiculos:
                 self.vehiculos.append(nuevo)
         
         # --- PASO 4: MARCAR PERDIDOS (Oclusión) ---
-        # Para los vehículos que predijimos pero que NO fueron actualizados
-        # (ej. ocultos tras una farola)
+        # Para los vehículos que predijimos pero que NO fueron actualizados (ej. ocultos tras una farola)
+
         for v in pos_predichas.keys():
             if v not in vehiculos_actualizados:
                 v.marcar_perdido(self.max_frames_perdido)
