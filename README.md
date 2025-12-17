@@ -74,3 +74,8 @@ No obstante, es fundamental reconocer las limitaciones inherentes a los métodos
 
 Si bien la solución actual cumple con todos los objetivos y demuestra una implementación sólida de los principios de Sistemas Inteligentes, para alcanzar una precisión "cercana a la perfección" en un entorno real y diverso, el paso siguiente en la evolución del proyecto sería migrar la fase de detección a modelos de Deep Learning (como YOLO o SSD).
 
+<br>
+
+<p align="center">
+  <img width="50%" alt="image" src="https://github.com/user-attachments/assets/b4c47d04-6ee6-4bc7-af93-7d05c473e2d6" />
+</p>
